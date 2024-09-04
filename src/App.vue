@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, provide, reactive, ref, watch } from 'vue'
+import { computed, onMounted, provide, reactive, ref, watch } from 'vue'
 import axios from 'axios'
 import Header from './components/Header.vue'
 import CardList from './components/CardList.vue'
@@ -9,6 +9,9 @@ const items = ref([])
 const cart = ref([])
 
 const drawerOpen = ref(false)
+
+const totalPrice = computed(() => cart.value.reduce((acc, item) => acc + item.price, 0))
+const vatPrice = computed(() => Math.round((totalPrice.value * 5) / 100))
 
 const closeDrawer = () => {
   drawerOpen.value = false
@@ -24,15 +27,36 @@ const filters = reactive({
 })
 
 const addToCart = (item) => {
-  if (!item.isAdded) {
-    cart.value.push(item)
-    item.isAdded = true
-  } else {
-    cart.value.splice(cart.value.indexOf(item), 1)
-    item.isAdded = false
-  }
+  cart.value.push(item)
+  item.isAdded = true
+}
 
-  console.log(cart)
+const removerFromCart = (item) => {
+  cart.value.splice(cart.value.indexOf(item), 1)
+  item.isAdded = false
+}
+
+const createOrder = async () => {
+  try {
+    const { data } = await axios.get(`https://27f08552a729a4dd.mokky.dev/orders`, {
+      items: cart.value,
+      totalPrice: totalPrice.value
+    })
+
+    cart.value = []
+
+    return data
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+const onClickAddPlus = (item) => {
+  if (!item.isAdded) {
+    addToCart(item)
+  } else {
+    removerFromCart(item)
+  }
 }
 
 const onChangeSelect = (event) => {
@@ -116,16 +140,24 @@ onMounted(async () => {
 })
 watch(filters, fetchItems)
 
-provide('cartActions', {
+provide('cart', {
+  cart,
   closeDrawer,
-  openDrawer
+  openDrawer,
+  addToCart,
+  removerFromCart
 })
 </script>
 
 <template>
-  <Drawer v-if="drawerOpen" />
+  <Drawer
+    v-if="drawerOpen"
+    :total-price="totalPrice"
+    :vat-price="vatPrice"
+    @create-order="createOrder"
+  />
   <div class="bg-white w-4/5 m-auto rounded-xl shadow-xl mt-14">
-    <Header @open-drawer="openDrawer" />
+    <Header :total-price="totalPrice" @open-drawer="openDrawer" />
 
     <div class="p-10">
       <div class="flex justify-between items-center">
@@ -151,12 +183,13 @@ provide('cartActions', {
       </div>
 
       <div class="mt-10">
-        <CardList :items="items" @add-to-favorite="addToFavorite" @add-to-cart="addToCart" />
+        <CardList :items="items" @add-to-favorite="addToFavorite" @add-to-cart="onClickAddPlus" />
       </div>
     </div>
   </div>
 </template>
 
+<!--5:37:00-->
 <!--3:20:00-->
 <!--2:56:15-->
 <!--1:56:00 -->
