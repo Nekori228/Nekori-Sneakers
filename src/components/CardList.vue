@@ -25,3 +25,5 @@ const emit = defineEmits(['addToFavorite', 'addToCart'])
     />
   </div>
 </template>
+
+<!--6:20:00-->
